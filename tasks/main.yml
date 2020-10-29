@@ -1,2 +1,44 @@
 ---
 # tasks file for ansible-prometheus
+
+- name: Create prometheus group
+  group:
+    name: prometheus
+    state: present
+
+- name: Create prometheus user
+  user:
+    name: prometheus
+    group: prometheus
+    state: present
+
+- name: Create required directories
+  file:
+    path: '{{ item }}'
+    state: directory
+    owner: prometheus
+    group: prometheus
+  with_items:
+    - '/etc/prometheus'
+    - '/var/lib/prometheus'
+
+#- name: Start and enable firewalld
+#  firewalld:
+
+- name: Copy systemd unit file
+  template:
+    src: 'templates/prometheus.service'
+    dest: '/etc/systemd/system/prometheus.service'
+
+- name: Download prometheus application
+  get_url:
+    url: 'https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz'
+    dest: '/tmp'
+
+- name: Start and enable prometheus service
+  systemd:
+    name: prometheus
+    state: started
+    enabled: true
+    masked: false
+    daemon_reload: true
